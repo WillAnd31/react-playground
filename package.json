@@ -13,7 +13,9 @@
   "scripts": {
     "start": "npm run server & npm run build:dev",
     "build:dev": "NODE_ENV=dev npm run build:general",
+    "build:prod": "NODE_ENV=prod npm run build:general",
     "build:general": "webpack --config webpack.config.js",
+    "start:prod": "npm run build:prod && pm2 startOrRestart ecosystem.json",
     "server": "node server.js"
   },
   "dependencies": {
