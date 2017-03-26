@@ -12,8 +12,12 @@ import Snackbar from 'material-ui/Snackbar';
 import Welcome from './welcome';
 
 const localStorageSettingsField = 'will.settings';
-const defaultSubReddit = 'astrophotography';
 const imageRegex = (/\.(gif|jpe?g|tiff|png)$/i)
+const defaults = {
+	subReddit: 'astrophotography',
+	name: 'Enter Name',
+	imageUrl: 'https://i.redd.it/oz6wdb38h5ny.jpg'
+};
 const styles = {
 	homeApp: {
 		boxSizing: 'border-box',
@@ -60,18 +64,16 @@ export default class Home extends React.Component {
 		this.openLoading = this.openLoading.bind(this);
 		this.closeLoading = this.closeLoading.bind(this);
 
+		var settings = this.getSettings();
+		styles.homeApp.backgroundImage = 'url(' + settings.imageUrl + ')';
+
 		this.state = {
 			styles,
+			settings,
 			loading: false,
 			loadingMsg: '',
-			settingsOpen: false,
-			settings: this.getSettings(),
-			imageUrl: ''
+			settingsOpen: false
 		};
-	}
-
-	componentDidMount () {
-		this.setBackgroundImage();
 	}
 
 	setBackgroundImage (e) {
@@ -85,11 +87,8 @@ export default class Home extends React.Component {
 				return this.loadImage(randomPost.data.url)
 					.then(() => randomPost.data.url);
 			})
-			.then(url => {
-				let state = _.cloneDeep(this.state);
-				state.imageUrl = url;
-				state.styles.homeApp.backgroundImage = 'url(' + url + ')';
-				this.setState(state);
+			.then(imageUrl => {
+				this.setSettings({ imageUrl });
 			})
 			.catch(err => {
 				this.openLoading('Failed to get image');
@@ -107,18 +106,24 @@ export default class Home extends React.Component {
 
 	getSettings () {
 		var settings = localStorage.getItem(localStorageSettingsField);
-		if (!settings) return {};
+		if (!settings) settings = {};
 
 		settings = JSON.parse(settings);
-		if (!settings.subReddit) settings.subReddit = defaultSubReddit;
-		if (!settings.name) settings.name = 'Enter Name';
+		if (!settings.subReddit) settings.subReddit = defaults.subReddit;
+		if (!settings.imageUrl) settings.imageUrl = defaults.imageUrl;
+		if (!settings.name) settings.name = defaults.name;
 
 		return settings;
 	}
 
 	setSettings (settings) {
-		localStorage.setItem(localStorageSettingsField, JSON.stringify(settings));
-		this.setState({ settings: this.getSettings() });
+		var updatedSettings = this.getSettings();
+		_.merge(updatedSettings, settings);
+		var state = _.cloneDeep(this.state);
+		localStorage.setItem(localStorageSettingsField, JSON.stringify(updatedSettings));
+		state.settings = updatedSettings;
+		state.styles.homeApp.backgroundImage = 'url(' + state.settings.imageUrl + ')';
+		this.setState(state);
 	}
 
 	openLoading (loadingMsg) {
@@ -183,7 +188,7 @@ export default class Home extends React.Component {
 				<IconButton onClick={this.setBackgroundImage}><AutoRenewIcon/></IconButton>
 			</Paper>
 
-			<Welcome name={this.state.settings.name} imageUrl={this.state.imageUrl}/>
+			<Welcome name={this.state.settings.name} imageUrl={this.state.settings.imageUrl}/>
 
 			{this.getSettingsModal()}
 			{this.getLoadingSnack()}
