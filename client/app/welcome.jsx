@@ -7,7 +7,9 @@ import Paper from 'material-ui/Paper';
 const styles = {
 	container: {
 		backgroundColor: 'rgba(255,255,255,0.8)',
-		padding: '1em'
+		padding: '1em',
+		margin: '0.5em',
+		minWidth: '30em'
 	},
 	welcomeTitle: {
 		fontSize: '2em',
@@ -34,9 +36,9 @@ export default class Welcome extends React.Component {
 		let hours = now.getHours();
 		let timeWelcome;
 
-		if (hours >= 0 || hours < 11) timeWelcome = 'Morning';
-		else if (hours >= 11 || hours < 15) timeWelcome = 'Afternoon';
-		else if (hours >= 15 || hours < 23) timeWelcome = 'Evening';
+		if (hours >= 0 && hours < 11) timeWelcome = 'Morning';
+		else if (hours >= 11 && hours < 15) timeWelcome = 'Afternoon';
+		else if (hours >= 15 && hours < 23) timeWelcome = 'Evening';
 
 		return <h1 style={styles.welcomeTitle}>Good {timeWelcome} {this.props.name}</h1>
 	}
@@ -50,12 +52,6 @@ export default class Welcome extends React.Component {
 		return <Paper style={styles.container} zDepth={3}>
 			{this.getWelcome()}
 			{this.getDate()}
-			<a style={{
-				color: 'rgba(0,0,0,0.5)',
-				width: '100%',
-				display: 'block',
-				textAlign: 'center'
-			}} href={this.props.imageUrl}>Image Source</a>
 		</Paper>
 	}
 }

@@ -3,18 +3,21 @@ import React from 'react';
 
 import Dialog from 'material-ui/Dialog';
 import IconButton from 'material-ui/IconButton';
+import RaisedButton from 'material-ui/RaisedButton';
 import SettingsIcon from 'material-ui/svg-icons/action/settings';
-import AutoRenewIcon from 'material-ui/svg-icons/action/autorenew';
+import ImageCollections from 'material-ui/svg-icons/image/collections';
 import TextField from 'material-ui/TextField';
 import Paper from 'material-ui/Paper';
 import Snackbar from 'material-ui/Snackbar';
 
 import Welcome from './welcome';
+import Background from './background';
+import Weather from './weather';
+import ImageGallery from './image-gallery';
 
 const localStorageSettingsField = 'will.settings';
-const imageRegex = (/\.(gif|jpe?g|tiff|png)$/i)
+const imageRegex = (/\.(gif|jpe?g|tiff|png)$/i);
 const defaults = {
-	subReddit: 'astrophotography',
 	name: 'Enter Name',
 	imageUrl: 'https://i.redd.it/oz6wdb38h5ny.jpg'
 };
@@ -26,9 +29,7 @@ const styles = {
 		justifyContent: 'center',
 		alignItems: 'center',
 		minHeight: '100vh',
-		minWidth: '100vw',
-		backgroundSize: 'cover',
-		backgroundColor: 'rgba(0,0,0,0.8)',
+		minWidth: '100vw'
 	},
 	settingsButton: {
 		position: 'absolute',
@@ -52,64 +53,34 @@ export default class Home extends React.Component {
 	constructor (props) {
 		super(props);
 
-		this.setBackgroundImage = this.setBackgroundImage.bind(this);
-		this.loadImage = this.loadImage.bind(this);
-		this.openSettings = this.openSettings.bind(this);
+		this.openModal = this.openModal.bind(this);
 		this.getSettingsModal = this.getSettingsModal.bind(this);
-		this.handleSettingsClose = this.handleSettingsClose.bind(this);
+		this.handleModalClose = this.handleModalClose.bind(this);
 		this.getSettings = this.getSettings.bind(this);
 		this.setSettings = this.setSettings.bind(this);
 		this.updateSettings = this.updateSettings.bind(this);
 		this.getLoadingSnack = this.getLoadingSnack.bind(this);
 		this.openLoading = this.openLoading.bind(this);
 		this.closeLoading = this.closeLoading.bind(this);
+		this.getImageGalleryModal = this.getImageGalleryModal.bind(this);
+		this.handleSelectImage = this.handleSelectImage.bind(this);
 
 		var settings = this.getSettings();
-		styles.homeApp.backgroundImage = 'url(' + settings.imageUrl + ')';
 
 		this.state = {
 			styles,
 			settings,
 			loading: false,
 			loadingMsg: '',
-			settingsOpen: false
+			settingsOpen: false,
+			imageGalleryOpen: false
 		};
-	}
-
-	setBackgroundImage (e) {
-		this.openLoading('Loading Image');
-
-		fetch('https://www.reddit.com/r/' + this.state.settings.subReddit + '.json')
-			.then(res => res.json())
-			.then(res => _.filter(res.data.children, child => imageRegex.test(child.data.url)))
-			.then(children => {
-				var randomPost = _.sample(children);
-				return this.loadImage(randomPost.data.url)
-					.then(() => randomPost.data.url);
-			})
-			.then(imageUrl => {
-				this.setSettings({ imageUrl });
-			})
-			.catch(err => {
-				this.openLoading('Failed to get image');
-				return Promise.reject(false);
-			});
-	}
-
-	loadImage (url) {
-		return fetch(url, { mode: 'no-cors' })
-			.catch(err => {
-				this.openLoading('Failed to get image');
-				return Promise.reject(false);
-			});
 	}
 
 	getSettings () {
 		var settings = localStorage.getItem(localStorageSettingsField);
-		if (!settings) settings = {};
+		settings = settings ? JSON.parse(settings) : {};
 
-		settings = JSON.parse(settings);
-		if (!settings.subReddit) settings.subReddit = defaults.subReddit;
 		if (!settings.imageUrl) settings.imageUrl = defaults.imageUrl;
 		if (!settings.name) settings.name = defaults.name;
 
@@ -122,7 +93,6 @@ export default class Home extends React.Component {
 		var state = _.cloneDeep(this.state);
 		localStorage.setItem(localStorageSettingsField, JSON.stringify(updatedSettings));
 		state.settings = updatedSettings;
-		state.styles.homeApp.backgroundImage = 'url(' + state.settings.imageUrl + ')';
 		this.setState(state);
 	}
 
@@ -134,12 +104,12 @@ export default class Home extends React.Component {
 		this.setState({ loadingMsg: '', loading: false });
 	}
 
-	openSettings () {
-		this.setState({ settingsOpen: true });
+	openModal (field) {
+		return () => this.setState({ [field]: true });
 	}
 
-	handleSettingsClose () {
-		this.setState({ settingsOpen: false });
+	handleModalClose (field) {
+		return () => this.setState({ [field]: false });
 	}
 
 	updateSettings (field) {
@@ -153,7 +123,7 @@ export default class Home extends React.Component {
 	getSettingsModal () {
 		return <Dialog style={styles.settingsModal}
 			modal={false}
-			onRequestClose={this.handleSettingsClose}
+			onRequestClose={this.handleModalClose('settingsOpen')}
 			open={this.state.settingsOpen}>
 
 			<div style={styles.settingsList}>
@@ -161,13 +131,18 @@ export default class Home extends React.Component {
 					fullWidth={true}
 					defaultValue={this.state.settings.name}
 					onChange={this.updateSettings('name')}/>
-				<TextField floatingLabelText="Subreddit"
-					fullWidth={true}
-					defaultValue={this.state.settings.subReddit}
-					onChange={this.updateSettings('subReddit')}
-					hintText="Ex: spaceporn, astrophotography"/>
+
 			</div>
 		</Dialog>
+	}
+
+	handleSelectImage (imageUrl) {
+		this.setSettings({ imageUrl });
+		this.setState({ imageGalleryOpen: false });
+	}
+
+	getImageGalleryModal () {
+		return <ImageGallery open={this.state.imageGalleryOpen} onSelectImage={this.handleSelectImage} handleClose={this.handleModalClose('imageGalleryOpen')}/>
 	}
 
 	getLoadingSnack () {
@@ -182,16 +157,26 @@ export default class Home extends React.Component {
 	render () {
 		return <div style={this.state.styles.homeApp} className="home-app">
 			<Paper zDepth={3} circle={true} style={styles.settingsButton}>
-				<IconButton onClick={this.openSettings}><SettingsIcon/></IconButton>
+				<IconButton onClick={this.openModal('settingsOpen')}><SettingsIcon/></IconButton>
 			</Paper>
 			<Paper zDepth={3} circle={true} style={styles.reloadButton}>
-				<IconButton onClick={this.setBackgroundImage}><AutoRenewIcon/></IconButton>
+				<IconButton onClick={this.openModal('imageGalleryOpen')}><ImageCollections/></IconButton>
 			</Paper>
 
-			<Welcome name={this.state.settings.name} imageUrl={this.state.settings.imageUrl}/>
+			<Background imageUrl={this.state.settings.imageUrl}/>
+			<Welcome name={this.state.settings.name}/>
+			{/*<Weather/>*/}
 
 			{this.getSettingsModal()}
+			{this.getImageGalleryModal()}
 			{this.getLoadingSnack()}
+
+			<a style={{
+				color: 'rgba(255,255,255,0.5)',
+				position: 'absolute',
+				bottom: '5px',
+				left: '5px'
+			}} href={this.state.settings.imageUrl}>Image Source</a>
 		</div>
 	}
 }
